@@ -100,7 +100,7 @@ public class TutorialService {
 	   
 	   List<Tutorial> AllTutorials = tutorialRepository.findAll();
 	   if(!AllTutorials.isEmpty()) {
-		   List<Tutorial> Tutorials = AllTutorials.stream().filter(t->t.getTitle().toLowerCase().equals(title.toLowerCase())).collect(Collectors.toList());
+		   List<Tutorial> Tutorials = AllTutorials.stream().filter(t->t.getTitle().toLowerCase().contains(title.toLowerCase())).collect(Collectors.toList());
 		   if(Tutorials.size() != 0)
 			   return Tutorials;
 		   return null;
