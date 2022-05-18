@@ -6,7 +6,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import com.quantiphi.employee.model.Address;
@@ -151,7 +157,7 @@ public Employee updateEmployee(Employee employee) {
 	   
 	   Employee employeeRemoved = null;
 	   List<Department> departments = (List<Department>) departmentRepository.findAll();
-	   List<Department> employeeDepartments = departments.stream().filter(e->e.getEmployees().stream().anyMatch(id->id.getEmployeeId() == employee.getEmployeeId())).collect(Collectors.toList());
+	   List<Department> employeeDepartments = departments.stream().filter(dep->dep.getEmployees().stream().anyMatch(emp->emp.getEmployeeId() == employee.getEmployeeId())).collect(Collectors.toList());
 	   List<Department> departmentUpdatedExists = departments.stream().filter(dep->dep.getDepartmentName().toLowerCase().equals(employee.getDepartment().toLowerCase())).collect(Collectors.toList()); 
 	   if(!employeeDepartments.isEmpty()) {
 		   if(employeeDepartments.get(0).getEmployees().size() == 1 && employeeDepartments.get(0).getEmployees().get(0).getEmployeeId() == employee.getEmployeeId()) {
@@ -228,29 +234,32 @@ public Employee updateEmployee(Employee employee) {
 	   return null;
 	 }
    
-   public List<Employee> filterEmployees(String[] filterList) {
-	   List<Employee> allEmployees = (List<Employee>) employeeRepository.findAll();
-	   List<Employee> filteredEmployees = null;
-	   for(String filters :filterList) {
-		   if(filters.split(":")[0].toLowerCase().equals("firstname"))
-			   filteredEmployees = allEmployees.stream().filter(name->name.getFirstName().toLowerCase().equals(filters.split(":")[1].toLowerCase())).collect(Collectors.toList());
-		   else if(filters.split(":")[0].toLowerCase().equals("lastname"))
-			   filteredEmployees = allEmployees.stream().filter(name->name.getLastName().toLowerCase().equals(filters.split(":")[1].toLowerCase())).collect(Collectors.toList());
-		   else if(filters.split(":")[0].toLowerCase().equals("department"))
-			   filteredEmployees = allEmployees.stream().filter(dep->dep.getDepartment().toLowerCase().equals(filters.split(":")[1].toLowerCase())).collect(Collectors.toList());
-		   else if(filters.split(":")[0].toLowerCase().equals("salary")) {
-			   if(filters.split(":")[1].charAt(0)=='<')
-				   filteredEmployees = allEmployees.stream().filter(sal->sal.getSalary() < Integer.parseInt(filters.split(":")[1].substring(1))).collect(Collectors.toList());
-			   else if(filters.split(":")[1].charAt(0)=='>')
-				   filteredEmployees = allEmployees.stream().filter(sal->sal.getSalary() > Integer.parseInt(filters.split(":")[1].substring(1))).collect(Collectors.toList());
-			   else if(filters.split(":")[1].charAt(0)=='=')
-				   filteredEmployees = allEmployees.stream().filter(sal->sal.getSalary() == Integer.parseInt(filters.split(":")[1].substring(1))).collect(Collectors.toList());
-		   }
-		   
-		  allEmployees = filteredEmployees;
-	   }
+   @SuppressWarnings("serial")
+public List<Employee> filterEmployees(String[] filterList) {
 	   
-	   return allEmployees.stream().sorted(Comparator.comparing(Employee::getFirstName)).collect(Collectors.toList());
+	   return employeeRepository.findAll(new Specification<Employee>() {
+           @Override
+           public Predicate toPredicate(Root<Employee> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+               List<Predicate> predicates = new ArrayList<>();
+               for(String filters :filterList) {
+            	   if(filters.split(":")[0].toLowerCase().equals("firstname"))
+            		   predicates.add(criteriaBuilder.and(criteriaBuilder.like(root.get("firstName"), filters.split(":")[1].toLowerCase())));   
+        		   else if(filters.split(":")[0].toLowerCase().equals("lastname"))
+        			   predicates.add(criteriaBuilder.and(criteriaBuilder.like(root.get("lastName"), filters.split(":")[1].toLowerCase())));
+        		   else if(filters.split(":")[0].toLowerCase().equals("department"))
+        			   predicates.add(criteriaBuilder.and(criteriaBuilder.like(root.get("department"), filters.split(":")[1].toLowerCase())));
+        		   else if(filters.split(":")[0].toLowerCase().equals("salary")) {
+        			   if(filters.split(":")[1].charAt(0)=='<')
+        				   predicates.add(criteriaBuilder.and(criteriaBuilder.lessThan(root.get("salary"), Integer.parseInt(filters.split(":")[1].substring(1)))));
+        			   else if(filters.split(":")[1].charAt(0)=='>')
+        				   predicates.add(criteriaBuilder.and(criteriaBuilder.greaterThan(root.get("salary"), Integer.parseInt(filters.split(":")[1].substring(1)))));
+        			   else if(filters.split(":")[1].charAt(0)=='=')
+        				   predicates.add(criteriaBuilder.and(criteriaBuilder.equal(root.get("salary"), Integer.parseInt(filters.split(":")[1].substring(1)))));
+        			   }
+             }
+               return criteriaBuilder.and(predicates.toArray(new Predicate[predicates.size()]));
+           }
+       }).stream().sorted(Comparator.comparing(Employee::getFirstName)).collect(Collectors.toList());
 	 }
 
    

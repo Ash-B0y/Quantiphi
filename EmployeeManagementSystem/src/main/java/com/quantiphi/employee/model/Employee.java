@@ -33,6 +33,16 @@ public class Employee implements Serializable{
 		super();
 	}
 
+	
+	public Employee(String firstName, String lastName, int salary, String department, Address address) {
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.salary = salary;
+		this.department = department;
+		this.address = address;
+	}
+
+
 	public int getEmployeeId() {
 		return employeeId;
 	}
